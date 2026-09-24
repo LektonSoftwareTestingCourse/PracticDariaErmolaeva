@@ -1,0 +1,15 @@
+card_exists	card_status	daily_limit	monthly_limit	balance	expiry_date     TC
+true	    ACTIVE	    above	    below	        below	valid           -> TC-07
+true	    ACTIVE	    below	    above	        below	current_month   -> TC-08
+true	    ACTIVE	    equal	    equal	        below	valid           -> TC-09
+true	    EXPIRED	    below	    below	        below	valid           -> TC-03
+true	    ACTIVE	    equal	    below	        equal	valid           -> TC-10
+true	    ACTIVE	    equal   	below	        above	current_month   -> TC-11
+true	    BLOCKED	    below	    below	        below	valid           -> TC-04
+true    	ACTIVE	    below   	equal	        equal	current_month   -> TC-12
+true    	ACTIVE	    below	    below	        below	expired         -> TC-06
+false   	ACTIVE	    below      	below	        below	valid           -> TC-05
+true	    INACTIVE	below   	below	        below	valid           -> TC-02
+true    	ACTIVE	    below	    equal	        above	valid           -> TC-13
+true	    ACTIVE	    equal   	above	        below	valid           -> TC-14
+true    	ACTIVE	    above	    below	        below	current_month   -> TC-15
