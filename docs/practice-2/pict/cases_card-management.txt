@@ -1,0 +1,8 @@
+bin	cardholder_name	currency_code	daily_limit	monthly_limit	initial_balance
+invalid_length	valid	valid	valid	valid	valid
+valid	valid	valid	valid	valid	negative
+non_digit	valid	valid	valid	valid	valid
+valid	valid	invalid	valid	valid	valid
+valid	valid	valid	valid	less_than_daily	valid
+valid	empty	valid	valid	valid	valid
+valid	valid	valid	zero_or_negative	valid	valid

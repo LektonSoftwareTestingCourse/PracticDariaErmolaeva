@@ -1,3 +1,4 @@
+authorization:
 card_exists	card_status	daily_limit	monthly_limit	balance	expiry_date     TC
 true	    ACTIVE	    above	    below	        below	valid           -> TC-07
 true	    ACTIVE	    below	    above	        below	current_month   -> TC-08
@@ -13,3 +14,13 @@ true	    INACTIVE	below   	below	        below	valid           -> TC-02
 true    	ACTIVE	    below	    equal	        above	valid           -> TC-13
 true	    ACTIVE	    equal   	above	        below	valid           -> TC-14
 true    	ACTIVE	    above	    below	        below	current_month   -> TC-15
+
+card-management:
+bin	            cardholder_name	currency_code	daily_limit	        monthly_limit	initial_balance	TC
+invalid_length	valid	        valid	        valid	            valid	        valid	        -> TC-CMS-02
+valid	        valid	        valid	        valid	            valid	        negative	    -> TC-CMS-08
+non_digit	    valid	        valid	        valid	            valid	        valid	        -> TC-CMS-03
+valid	        valid	        invalid	        valid	            valid	        valid	        -> TC-CMS-04
+valid	        valid	        valid	        valid	            less_than_daily	valid	        -> TC-CMS-06
+valid	        empty	        valid	        valid	            valid	        valid	        -> TC-CMS-07
+valid	        valid	        valid	        zero_or_negative	valid	        valid	        -> TC-CMS-05
