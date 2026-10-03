@@ -1,0 +1,15 @@
+card_exists	card_status	daily_limit	monthly_limit	balance	expiry_date
+true	ACTIVE	above	below	below	valid
+true	ACTIVE	below	above	below	current_month
+true	ACTIVE	equal	equal	below	valid
+true	EXPIRED	below	below	below	valid
+true	ACTIVE	equal	below	equal	valid
+true	ACTIVE	equal	below	above	current_month
+true	BLOCKED	below	below	below	valid
+true	ACTIVE	below	equal	equal	current_month
+true	ACTIVE	below	below	below	expired
+false	ACTIVE	below	below	below	valid
+true	INACTIVE	below	below	below	valid
+true	ACTIVE	below	equal	above	valid
+true	ACTIVE	equal	above	below	valid
+true	ACTIVE	above	below	below	current_month
