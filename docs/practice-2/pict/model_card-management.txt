@@ -1,0 +1,12 @@
+bin: valid, invalid_length, non_digit
+cardholder_name: valid, empty
+currency_code: valid, invalid
+daily_limit: valid, zero_or_negative
+monthly_limit: valid, less_than_daily
+initial_balance: valid, negative
+
+IF [bin] <> "valid" THEN [cardholder_name] = "valid" AND [currency_code] = "valid" AND [daily_limit] = "valid" AND [monthly_limit] = "valid" AND [initial_balance] = "valid";
+IF [cardholder_name] = "empty" THEN [currency_code] = "valid" AND [daily_limit] = "valid" AND [monthly_limit] = "valid" AND [initial_balance] = "valid";
+IF [currency_code] = "invalid" THEN [daily_limit] = "valid" AND [monthly_limit] = "valid" AND [initial_balance] = "valid";
+IF [daily_limit] <> "valid" THEN [monthly_limit] = "valid" AND [initial_balance] = "valid";
+IF [monthly_limit] <> "valid" THEN [initial_balance] = "valid";

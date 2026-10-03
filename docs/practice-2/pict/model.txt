@@ -1,0 +1,16 @@
+card_exists: true, false
+card_status: ACTIVE, INACTIVE, EXPIRED, BLOCKED
+daily_limit: below, equal, above
+monthly_limit: below, equal, above
+balance: below, equal, above
+expiry_date: valid, current_month, expired
+
+IF [card_exists] = "false" THEN [card_status] = "ACTIVE" AND [daily_limit] = "below" AND [monthly_limit] = "below" AND [balance] = "below" AND [expiry_date] = "valid";
+
+IF [card_status] <> "ACTIVE" THEN [daily_limit] = "below" AND [monthly_limit] = "below" AND [balance] = "below" AND [expiry_date] = "valid";
+
+IF [expiry_date] = "expired" THEN [daily_limit] = "below" AND [monthly_limit] = "below" AND [balance] = "below";
+
+IF [daily_limit] = "above" THEN [monthly_limit] = "below" AND [balance] = "below";
+
+IF [monthly_limit] = "above" THEN [balance] = "below";
