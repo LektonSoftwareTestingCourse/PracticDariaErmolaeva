@@ -42,13 +42,13 @@ Q_CARD --> DLX_CARD : dead letter
 DLX_CARD --> DLQ_CARD : card-notifications
 
 note bottom of SW
-  Если отправка транзакции в RabbitMQ 
-  упала с ошибкой, Switch откатывает 
+  Если отправка транзакции в RabbitMQ
+  упала с ошибкой, Switch откатывает
   резерв суммы и отвечает клиенту code 96.
 end note
 
 note bottom of CMS
-  События карт отправляются через outbox: 
+  События карт отправляются через outbox:
   опрос раз в 1 с,до 3 попыток отправки,
   затем статус FAILED.
 end note
