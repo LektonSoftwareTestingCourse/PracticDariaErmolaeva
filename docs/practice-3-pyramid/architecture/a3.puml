@@ -1,0 +1,71 @@
+@startuml a3-component
+
+title A3. Компоненты Authorization и Card Management
+
+left to right direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam ArrowThickness 1.5
+skinparam legend {
+    BackgroundColor #FAFAFA
+    BorderColor #999999
+}
+
+rectangle "Switch" as SW #EEEEEE
+rectangle "Bin Lookup" as BIN #F8BBD0
+database "PostgreSQL" as DB #E0E0E0
+queue "RabbitMQ" as RMQ #FFF9C4
+
+rectangle "Authorization" #E8F5E9 {
+    rectangle "AuthControllerImpl" as A_CTRL
+    rectangle "AuthServiceImpl" as A_SVC
+    rectangle "CardManagementClientImpl\n(HTTP-клиент)" as A_CMS
+    rectangle "BinLookupClient\n(HTTP-клиент)" as A_BIN
+    rectangle "LimitUsageRepository\n(лимиты, RRN)" as A_REPO
+}
+
+rectangle "Card Management" #E3F2FD {
+    rectangle "CardController" as C_CTRL
+    rectangle "CardServiceImpl" as C_SVC
+    rectangle "Репозитории\nCard / Reservation /\nReservationRollback" as C_REPO
+    rectangle "CardEventNotifierImpl" as C_NOTIF
+    rectangle "OutboxRepository" as C_OUTBOX
+    rectangle "OutboxProcessor" as C_SCHED
+    rectangle "OutboxEventProcessorImpl" as C_PUB
+}
+
+SW --> A_CTRL : HTTP /api/internal/authorize, /rollback
+A_CTRL --> A_SVC
+A_SVC --> A_CMS
+A_SVC --> A_BIN
+A_SVC --> A_REPO
+A_BIN --> BIN : HTTP
+A_REPO --> DB : JDBC
+
+A_CMS --> C_CTRL : HTTP /api/cards/{pan}, /reserve, /rollback
+C_CTRL --> C_SVC
+C_SVC --> C_REPO
+C_REPO --> DB : JDBC
+C_SVC --> C_NOTIF : событие
+C_NOTIF --> C_OUTBOX : запись в outbox
+C_OUTBOX --> DB : JDBC
+C_SCHED --> C_OUTBOX : findPending
+C_SCHED --> C_PUB
+C_PUB --> C_OUTBOX : статус PROCESSED / FAILED
+C_PUB ..> RMQ : AMQP smp.card-events
+
+legend right
+  |= Линия |= Смысл |
+  | сплошная | sync: вызов / HTTP / JDBC |
+  | пунктир | async: AMQP |
+  |= Цвет |= Блок |
+  | <back:#E8F5E9>   </back> | сервис Authorization (компоненты внутри) |
+  | <back:#E3F2FD>   </back> | сервис Card Management (компоненты внутри) |
+  | <back:#EEEEEE>   </back> | вызывающий сервис |
+  | <back:#F8BBD0>   </back> | внешний API |
+  | <back:#FFF9C4>   </back> | брокер сообщений |
+  | <back:#E0E0E0>   </back> | база данных |
+endlegend
+
+@enduml

@@ -1,0 +1,77 @@
+@startuml a2-container
+
+title A2. СМП - контейнеры и связи (sync / async)
+
+left to right direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam ArrowThickness 1.5
+skinparam legend {
+    BackgroundColor #FAFAFA
+    BorderColor #999999
+}
+
+rectangle "Terminal Simulator\n:8085" as TERM #BBDEFB
+rectangle "Merchant Acquirer\n:8084" as MERCH #BBDEFB
+
+rectangle "Web Dashboard\n:3000" as WEB #FFF3E0
+rectangle "Gateway\n:8080" as GW #FFE0B2
+
+rectangle "Switch\n:8082" as SW #C8E6C9
+rectangle "Authorization\n:8083" as AUTH #C8E6C9
+rectangle "Card Management\n:8081" as CMS #C8E6C9
+rectangle "Bin Lookup\n:8096" as BIN #F8BBD0
+
+rectangle "Transaction Logger\n:8088" as LOG #D1C4E9
+rectangle "Notification Service\n:8097" as NS #D1C4E9
+
+queue "RabbitMQ\n:5672 (AMQP)\n:15672 (UI)" as RMQ #FFF9C4
+database "PostgreSQL\n:5432" as DB #E0E0E0
+
+WEB --> GW : HTTP\n(статистика, поиск транзакций)
+WEB -[#7B1FA2,dotted]-> LOG : WebSocket\n(данные приходят push-ем)
+TERM --> GW : HTTP\n(авторизация транзакций)
+TERM --> CMS : HTTP\n(список карт)
+MERCH --> GW : HTTP\n(транзакции, список карт)
+GW --> SW : HTTP\n(маршрутизация транзакций)
+GW --> CMS : HTTP\n(управление картами)
+GW --> LOG : HTTP\n(поиск, статистика)
+GW --> TERM : HTTP\n(запуск симуляции)
+GW --> MERCH : HTTP\n(запуск симуляции)
+SW --> AUTH : HTTP\n(авторизация, откат)
+SW --> MERCH : HTTP\n(запрос комиссии)
+AUTH --> CMS : HTTP\n(карта, резерв, откат)
+AUTH --> BIN : HTTP\n(issuerId по BIN)
+
+SW ..> RMQ : AMQP\n(лог транзакции)\nsmp.transactions
+RMQ ..> LOG : AMQP\n(лог транзакции)\ntransaction-log
+CMS ..> RMQ : AMQP\n(outbox, события карт)\nsmp.card-events
+RMQ ..> NS : AMQP\n(события карт)\ncard-notifications
+
+AUTH --> DB : JDBC\n(лимиты, RRN)
+CMS --> DB : JDBC\n(карты, резервы, outbox)
+MERCH --> DB : JDBC\n(комиссии эквайринга)
+LOG --> DB : JDBC\n(транзакции)
+NS --> DB : JDBC\n(уведомления)
+
+legend right
+  |= Линия |= Смысл |
+  | сплошная | sync: HTTP / JDBC |
+  | пунктир | async: AMQP |
+  | <color:#7B1FA2>точечная фиолетовая</color> | WebSocket: соединение открывает клиент, данные идут push-ем |
+  |= Цвет |= Блок |
+  | <back:#BBDEFB>   </back> | эмуляторы внешних систем |
+  | <back:#FFF3E0>   </back> | фронтенд |
+  | <back:#FFE0B2>   </back> | API-шлюз, единая точка входа |
+  | <back:#C8E6C9>   </back> | ядро процессинга |
+  | <back:#F8BBD0>   </back> | внешний API |
+  | <back:#D1C4E9>   </back> | async-потребители |
+  | <back:#FFF9C4>   </back> | брокер сообщений |
+  | <back:#E0E0E0>   </back> | база данных |
+  Порты на схеме - порты на хосте (по .env.example).
+  Внутри сети smp-network все Java-сервисы слушают 8080
+  и обращаются друг к другу по имени.
+endlegend
+
+@enduml

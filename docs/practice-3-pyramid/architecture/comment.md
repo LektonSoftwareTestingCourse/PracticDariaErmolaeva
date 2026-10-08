@@ -1,0 +1,18 @@
+# Комментарий к диаграммам
+
+| № | Чего не хватало в проекте | Что сделано | Подтверждение кодом |
+|---|---|---|---|
+| А1 | Context-диаграммы нет. На графике архитектуры все блоки расположены на одной схеме, что мешает понять, где находятся границы СМП | СМП показана одним блоком. Выделены 4 актора: пользователь, терминал, мерчант, BIN Lookup. Для каждого указан протокол | Терминал и мерчант: `GatewayClient.java` (показывает, что терминал и мерчант делают запрос к СМП). Дашборд: `useWebSocket.ts` (соединение через веб-сокет), `dashboard/src/api/client.ts` (REST запрос к СМП за получением данных для экранов). BIN Lookup: `BinLookupClient.java` (видно, что СМП может послать запрос). |
+| А2 | Схема есть, но все стрелки одинаковые: не видно, где sync, а где async. Нет outbox и не все связи сверены с `docker-compose.yaml` | Нарисованы 10 сервисов + PostgreSQL + RabbitMQ. Сплошная линия - синхронные запросы (HTTP/JDBC), пунктир - асинхронные (AMQP), фиолетовой линией показан WebSocket push данных. Добавлены связи, которых не было: Switch -> Merchant (комиссия), Terminal -> Card Management (список карт), Merchant -> БД (хранение комиссии) | `docker-compose.yaml` (список сервисов и порты), `gateway/application.yml` (маршруты), `switch/RouteService.java`, `switch/LoggerClient.java` (публикация в RabbitMQ), `card-management/OutboxEventProcessorImpl.java` (паттерн outbox) |
+| А3 | Компонентной схемы нет совсем | Показаны цепочки controller -> service -> client/repository для Authorization и Card Management. Видно, где HTTP-клиенты, где БД и для реализации outbox'а сделан отдельный компонент | `AuthControllerImpl`, `AuthServiceImpl`, `CardManagementClientImpl`, `BinLookupClient`, `LimitUsageRepository`; `CardController`, `CardServiceImpl`, `CardEventNotifierImpl`, `OutboxProcessor`, `OutboxEventProcessorImpl` |
+| А4 | Есть только happy path и общая ветка declined; нет reversal и конкретной причины отказа | Добавлены declined (карта BLOCKED) и reversal. Отмечено, что запись в Logger появляется асинхронно, уже после ответа клиенту | `switch/RouteService.java` (метод `route`: authorize -> publish -> rollback), `AuthServiceImpl.java` (проверки и отказы), `DeclineOutcome.java` (коды отказа), `AuthorizationResponse.systemError` (code 96) |
+| А5 | Топология описана только таблицей | Нарисованы exchange -> queue -> consumer и DLX/DLQ для транзакций и событий карт, указаны x-max-delivery 3, TTL 60 с, outbox | `RabbitMQConfig.java` в switch, transaction-logger, card-management, notification-service; `TransactionLogListener`, `CardEventListener`; `card-management/application.properties` (настройки outbox и подключения к RabbitMQ) |
+| А6 | Диаграмм состояний нет | Три автомата: статусы карты, статус транзакции (APPROVED / DECLINED) и статус резерва средств (RESERVED -> ROLLED_BACK). Можно было сделать одну диаграмму для транзакции, но тогда для неё смешивались бы статус прохождения транзакции, и статус резерва средств | `CardStatus.java`, `CardServiceImpl.java` (patch, delete), `CardGeneratorService.java` (доли статусов карты при генерации), `AuthServiceImpl.java`, `TransactionStatus.java`, `ReservationStatus.java`, `Reservation.java` (переходы резерва) |
+
+## Расхождения задания и кода
+
+- A2: В системе 10, а не 11 сервисов.
+- A2: Ожидания publisher-confirm для Switch -> Logger в коде нет: Switch вызывает `convertAndSend` и откатывает резерв только если публикация бросила `AmqpException`.
+- A4: mti 0400 есть только в `AuthorizationRequest.forReversal()`, но он нигде не вызывается.
+- A6: `ROLLED_BACK` - статус резерва (`ReservationStatus`), а не транзакции: у `TransactionStatus` только APPROVED и DECLINED.
+- A6: В `CardStatus` есть пятый статус `DELETED`.

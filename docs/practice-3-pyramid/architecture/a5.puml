@@ -1,0 +1,69 @@
+@startuml a5-rabbitmq
+
+title A5. Топология RabbitMQ
+
+left to right direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam ArrowThickness 1.5
+skinparam legend {
+    BackgroundColor #FAFAFA
+    BorderColor #999999
+}
+
+rectangle "Switch\n(LoggerClient)" as SW #C8E6C9
+rectangle "Card Management\n(outbox -> OutboxEventProcessorImpl)" as CMS #C8E6C9
+rectangle "Transaction Logger\n(TransactionLogListener)" as LOG #D1C4E9
+rectangle "Notification Service\n(CardEventListener)" as NS #D1C4E9
+
+rectangle "RabbitMQ" #FFFDE7 {
+    rectangle "smp.transactions\n(topic)" as EX_TX #FFF59D
+    queue "transaction-log\n(x-max-delivery 3)" as Q_TX #E1F5FE
+    rectangle "smp.transactions.dlx\n(direct)" as DLX_TX #FFCC80
+    queue "transaction-log-dlq\n(TTL 60 с)" as DLQ_TX #FFCCBC
+
+    rectangle "smp.card-events\n(topic)" as EX_CARD #FFF59D
+    queue "card-notifications\n(x-max-delivery 3)" as Q_CARD #E1F5FE
+    rectangle "smp.card-events.dlx\n(direct)" as DLX_CARD #FFCC80
+    queue "card-notifications-dlq\n(TTL 60 с)" as DLQ_CARD #FFCCBC
+}
+
+SW ..> EX_TX : publish\ntransaction.log
+EX_TX --> Q_TX : transaction.log
+Q_TX ..> LOG : consume
+Q_TX --> DLX_TX : dead letter
+DLX_TX --> DLQ_TX : transaction-log
+
+CMS ..> EX_CARD : publish\ncard.<тип события>
+EX_CARD --> Q_CARD : card.*
+Q_CARD ..> NS : consume
+Q_CARD --> DLX_CARD : dead letter
+DLX_CARD --> DLQ_CARD : card-notifications
+
+note bottom of SW
+  Если отправка транзакции в RabbitMQ 
+  упала с ошибкой, Switch откатывает 
+  резерв суммы и отвечает клиенту code 96.
+end note
+
+note bottom of CMS
+  События карт отправляются через outbox: 
+  опрос раз в 1 с,до 3 попыток отправки,
+  затем статус FAILED.
+end note
+
+legend right
+  |= Линия |= Смысл |
+  | пунктир | AMQP: сервис публикует в брокер / читает из очереди |
+  | сплошная | маршрутизация внутри RabbitMQ |
+  |= Цвет |= Блок |
+  | <back:#C8E6C9>   </back> | producer |
+  | <back:#D1C4E9>   </back> | consumer |
+  | <back:#FFF59D>   </back> | основной exchange |
+  | <back:#E1F5FE>   </back> | основная очередь |
+  | <back:#FFCC80>   </back> | DLX (exchange для неудачных сообщений) |
+  | <back:#FFCCBC>   </back> | DLQ (очередь неудачных сообщений, без читателя) |
+endlegend
+
+@enduml
