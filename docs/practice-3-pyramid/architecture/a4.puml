@@ -1,0 +1,69 @@
+@startuml a4-sequence
+
+title A4. Путь транзакции: happy path, declined, reversal
+
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam sequenceMessageAlign center
+
+participant "Терминал /\nМерчант" as CL
+participant "Gateway" as GW
+participant "Switch" as SW
+participant "Authorization" as AUTH
+participant "Card Management" as CMS
+participant "Bin Lookup" as BIN
+participant "Merchant Acquirer" as MERCH
+queue "RabbitMQ" as RMQ
+participant "Transaction Logger" as LOG
+
+== 1. Happy path ==
+CL -> GW : POST /api/transactions (mti 0100)
+GW -> SW : POST /api/internal/route
+SW -> SW : BIN -> issuerId (таблица bin-routing)
+SW -> AUTH : POST /api/internal/authorize
+AUTH -> CMS : GET /api/cards/{pan}
+CMS --> AUTH : карта ACTIVE
+AUTH -> BIN : GET /api/bin/{bin}
+BIN --> AUTH : issuerId
+AUTH -> AUTH : срок, баланс, лимиты (БД)
+AUTH -> CMS : POST /api/cards/{pan}/reserve
+CMS --> AUTH : 200
+AUTH --> SW : APPROVED, code 00, rrn
+SW -> MERCH : комиссия эквайринга
+MERCH --> SW : fee
+SW -> RMQ : publish transaction.log
+SW --> GW : APPROVED
+GW --> CL : APPROVED
+... асинхронно, после ответа клиенту ...
+RMQ ->> LOG : transaction-log
+LOG -> LOG : запись в БД + WebSocket
+
+== 2. Declined (карта BLOCKED) ==
+CL -> GW : POST /api/transactions
+GW -> SW : POST /api/internal/route
+SW -> AUTH : POST /api/internal/authorize
+AUTH -> CMS : GET /api/cards/{pan}
+CMS --> AUTH : карта BLOCKED
+AUTH --> SW : DECLINED, code 05, CARD_BLOCKED
+SW -> RMQ : publish transaction.log
+SW --> GW : DECLINED
+GW --> CL : DECLINED
+... асинхронно ...
+RMQ ->> LOG : transaction-log (DECLINED)
+
+== 3. Reversal (брокер не принял сообщение) ==
+CL -> GW : POST /api/transactions
+GW -> SW : POST /api/internal/route
+SW -> AUTH : POST /api/internal/authorize
+AUTH -> CMS : reserve
+AUTH --> SW : APPROVED, rrn
+SW -> RMQ : publish transaction.log
+RMQ --x SW : ошибка публикации
+SW -> AUTH : POST /api/internal/rollback (rrn, pan, amount)
+AUTH -> CMS : POST /api/cards/{pan}/rollback
+CMS --> AUTH : резерв ROLLED_BACK
+AUTH --> SW : rollback APPROVED
+SW --> GW : DECLINED, code 96
+GW --> CL : DECLINED, code 96
+
+@enduml

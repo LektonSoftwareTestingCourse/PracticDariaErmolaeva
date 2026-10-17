@@ -1,0 +1,59 @@
+@startuml a6-state
+
+title A6. Состояния карты, транзакции и резерва средств
+
+skinparam shadowing false
+skinparam defaultFontSize 12
+
+state "Card.status" as CARD {
+    [*] --> ACTIVE : создание (POST /api/cards)
+    [*] --> INACTIVE : генерация (3%)
+    [*] --> BLOCKED : генерация (2%)
+    ACTIVE --> INACTIVE : PATCH / bulk-update
+    ACTIVE --> BLOCKED : PATCH / bulk-update
+    ACTIVE --> EXPIRED : PATCH / bulk-update
+    INACTIVE --> ACTIVE : PATCH / bulk-update
+    BLOCKED --> ACTIVE : PATCH / bulk-update
+    ACTIVE --> DELETED : DELETE
+    INACTIVE --> DELETED : DELETE
+    BLOCKED --> DELETED : DELETE
+    EXPIRED --> DELETED : DELETE
+    DELETED --> [*]
+}
+
+note right of CARD
+  Авторизация проходит только при ACTIVE:
+  BLOCKED / INACTIVE -> code 05,
+  EXPIRED -> code 54,
+  Не найдена -> code 14.
+end note
+
+state "Транзакция (TransactionStatus)" as TX {
+    [*] --> APPROVED : проверки пройдены,\nрезерв создан,\nпубликация успешна
+    [*] --> DECLINED : отказ на проверках\n(14, 05, 51, 54, 61, 96)
+    [*] --> DECLINED : ошибка публикации\nпосле резерва (code 96)
+    APPROVED --> [*]
+    DECLINED --> [*]
+}
+
+note right of TX
+  Других статусов у транзакции нет.
+  При ошибке публикации (code 96)
+  запись в Logger не попадает.
+end note
+
+state "Transaction (резерв средств)" as RES {
+    [*] --> RESERVED : POST /reserve\n(после всех проверок)
+    RESERVED --> ROLLED_BACK : POST /rollback\n(ошибка публикации в Switch)
+    ROLLED_BACK --> ROLLED_BACK : повторный rollback\n-> ALREADY_ROLLED_BACK
+    RESERVED --> [*] : транзакция APPROVED\n(средства зарезервированы)
+    ROLLED_BACK --> [*]
+}
+
+note right of RES
+  Хранится в Card Management.
+  После APPROVED резерв остаётся
+  RESERVED: списания в коде нет.
+end note
+
+@enduml

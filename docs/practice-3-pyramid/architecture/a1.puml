@@ -1,0 +1,41 @@
+@startuml a1-context
+
+title A1. СМП - внешние акторы и протоколы входа
+
+left to right direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam ArrowThickness 1.5
+skinparam rectangle {
+    BorderColor #444444
+}
+skinparam legend {
+    BackgroundColor #FAFAFA
+    BorderColor #999999
+}
+
+actor "Пользователь\nдашборда" as USER
+rectangle "POS-терминал" as TERM #BBDEFB
+rectangle "Мерчант / эквайрер" as MERCH #BBDEFB
+
+rectangle "СМП\nСимулятор процессингового центра" as SMP #C8E6C9
+
+rectangle "BIN Lookup" as BIN #F8BBD0
+
+USER --> SMP : Запросы на просмотр экранов,\nHTTP REST JSON\n+ WebSocket
+TERM --> SMP : Запросы на обработку транзакции,\nHTTP REST JSON
+MERCH --> SMP : Запросы на обработку транзакции,\nHTTP REST JSON
+
+SMP --> BIN : Запрос данных по BIN,\nHTTP REST JSON
+
+legend right
+  | Обозначение | Смысл |
+  | <back:#BBDEFB>   </back> | эмуляторы внешних систем |
+  | <back:#F8BBD0>   </back> | внешний API |
+  | <back:#C8E6C9>   </back> | границы системы (СМП) |
+  Аутентификации на входе нет; ISO 8583 эмулируется
+  полями JSON, не бинарным протоколом.
+endlegend
+
+@enduml
