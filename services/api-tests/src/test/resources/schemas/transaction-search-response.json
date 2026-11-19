@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "required": ["total", "transactions"],
+  "properties": {
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "transactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "stan", "pan", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "stan": { "type": "string", "pattern": "^[0-9]{6}$" },
+          "pan": { "type": "string", "pattern": "^[0-9]{16}$" },
+          "status": { "type": "string", "enum": ["APPROVED", "DECLINED"] }
+        }
+      }
+    }
+  }
+}
