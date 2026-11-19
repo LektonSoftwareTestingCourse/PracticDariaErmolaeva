@@ -79,7 +79,7 @@ jobs:
             --retry-max-time 300 --max-time 5 -o /dev/null "$url"
         done
 
-        mvn -B -f services/pom.xml -P common,api-tests test
+        mvn -B -f services/pom.xml -pl api-tests -am test
 
   java-services:
     runs-on: ubuntu-latest
