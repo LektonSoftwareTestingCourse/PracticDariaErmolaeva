@@ -155,6 +155,13 @@
                 <module>notification-service</module>
             </modules>
         </profile>
+
+        <profile>
+            <id>api-tests</id>
+            <modules>
+                <module>api-tests</module>
+            </modules>
+        </profile>
     </profiles>
 
 
